@@ -1,0 +1,64 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda function with cfn-response.
+Resources:
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: lambda-function-name_trigger
+      Runtime: nodejs12.x
+      Role: arn:aws:iam::699606088333:role/aws-lambda-execution-role
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+          // TODO implement
+          const response = {
+          statusCode: 200,
+          body: JSON.stringify('Hello from Lambda!'),
+          };
+           return response;
+          };
+
+      Description: Invoke a function during stack creation.
+      TracingConfig:
+        Mode: Active
+  myLogGroup: 
+    Type: AWS::Logs::LogGroup
+    Properties:
+     LogGroupName: /aws/lambda/lambda-function-name_trigger 
+     RetentionInDays: 7
+  LogStream: 
+   Type: AWS::Logs::LogStream
+   Properties: 
+    LogGroupName: !Ref "myLogGroup"
+    LogStreamName: "MylambdafunctionLogStream"       
+  ScheduledRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "ScheduledRule"
+      ScheduleExpression: "rate(2 minutes)"
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: 
+            Fn::GetAtt: 
+              - "LambdaFunction"
+              - "Arn"
+          Id: "TargetFunctionV1"
+        -
+          Arn: 
+            Fn::GetAtt: 
+              - "myLogGroup"
+              - "Arn"
+          Id: "lambdafuntion"  
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !Ref "LambdaFunction"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: 
+        Fn::GetAtt: 
+          - "ScheduledRule"
+          - "Arn"
+   
